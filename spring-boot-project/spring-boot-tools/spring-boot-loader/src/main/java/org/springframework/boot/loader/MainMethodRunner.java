@@ -42,10 +42,16 @@ public class MainMethodRunner {
 		this.args = (args != null) ? args.clone() : null;
 	}
 
+	/**
+	 * 利用反射去调用application的main方法
+	 * @throws Exception exception
+	 */
 	public void run() throws Exception {
+		// 用线程的类加载器，加载application的入口类
 		Class<?> mainClass = Class.forName(this.mainClassName, false, Thread.currentThread().getContextClassLoader());
 		Method mainMethod = mainClass.getDeclaredMethod("main", String[].class);
 		mainMethod.setAccessible(true);
+		// 反射调用，执行main方法
 		mainMethod.invoke(null, new Object[] { this.args });
 	}
 

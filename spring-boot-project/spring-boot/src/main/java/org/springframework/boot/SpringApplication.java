@@ -255,10 +255,12 @@ public class SpringApplication {
 		Assert.notNull(primarySources, "PrimarySources must not be null");
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
-		this.bootstrapRegistryInitializers = new ArrayList<>(
-				getSpringFactoriesInstances(BootstrapRegistryInitializer.class));
+		this.bootstrapRegistryInitializers = new ArrayList<>(getSpringFactoriesInstances(BootstrapRegistryInitializer.class));
+		// 设置初始化器集合
 		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
+		// 设置监听器集合
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
+		// 设置应用启动类
 		this.mainApplicationClass = deduceMainApplicationClass();
 	}
 
@@ -286,26 +288,49 @@ public class SpringApplication {
 	public ConfigurableApplicationContext run(String... args) {
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
+		// 创建一个应用上下文，这里实际上返回的内部没有实质内容，只是一个壳
 		DefaultBootstrapContext bootstrapContext = createBootstrapContext();
+		// bean容器的引用
 		ConfigurableApplicationContext context = null;
+		// 设置系统属性java.awt.headless为true，即无显示器鼠标键盘等硬件设备的服务器模式
 		configureHeadlessProperty();
+		// 监听器，通过SpringFactoriesLoader加载listeners：比如EventPublishingRunListener
 		SpringApplicationRunListeners listeners = getRunListeners(args);
+		// 发布SprintBoot启动事件：ApplicationStartingEvent
+		// 对应的监听器会监听到，进行处理
 		listeners.starting(bootstrapContext, this.mainApplicationClass);
 		try {
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+			// 环境相关
+			// 创建和配置environment，发布事件：SpringApplicationRunListeners#environmentPrepared
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
 			configureIgnoreBeanInfo(environment);
 			Banner printedBanner = printBanner(environment);
+			// 创建ApplicationContext，真正的bean容器。Web类型，Reactive类型，普通的类型(非Web)
+			// AnnotationConfigServletWebServerApplicationContext
 			context = createApplicationContext();
+			// TODO-TZY: 2021/8/31 16:58
 			context.setApplicationStartup(this.applicationStartup);
+			// 准备环境
+			// 调用EventPublishingRunListener发布ApplicationContext加载完毕事件：ApplicationPreparedEvent
 			prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
+			// 容器处理，最终会调用到AbstractApplicationContext#refresh方法，实际上就是Spring IOC容器的创建过程，并且会进行
+			//  自动装配的操作,以及发布ApplicationContext已经refresh事件，标志着ApplicationContext初始化完成
+			// 底层会启动启动内置的tomcat容器
 			refreshContext(context);
+			// ?
+			// hook方法
 			afterRefresh(context, applicationArguments);
+			// 停止计时
 			stopWatch.stop();
 			if (this.logStartupInfo) {
 				new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), stopWatch);
 			}
+			// ？
+			// 发布SpringBoot程序已启动事件ApplicationStartedEvent
 			listeners.started(context);
+			// ？
+			// 调用ApplicationRunner和CommandLineRunner
 			callRunners(context, applicationArguments);
 		}
 		catch (Throwable ex) {
@@ -314,6 +339,8 @@ public class SpringApplication {
 		}
 
 		try {
+			// ？
+			// 最后发布就绪事件ApplicationReadyEvent，标志着SpringBoot可以处理就收的请求了
 			listeners.running(context);
 		}
 		catch (Throwable ex) {
@@ -408,6 +435,7 @@ public class SpringApplication {
 
 	private SpringApplicationRunListeners getRunListeners(String[] args) {
 		Class<?>[] types = new Class<?>[] { SpringApplication.class, String[].class };
+		// 返回一个监听器，底层是使用反射，调用构造函数创建实例
 		return new SpringApplicationRunListeners(logger,
 				getSpringFactoriesInstances(SpringApplicationRunListener.class, types, this, args),
 				this.applicationStartup);
@@ -417,15 +445,22 @@ public class SpringApplication {
 		return getSpringFactoriesInstances(type, new Class<?>[] {});
 	}
 
+	/**
+	 * 创建监听器的多个实例
+	 */
 	private <T> Collection<T> getSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes, Object... args) {
 		ClassLoader classLoader = getClassLoader();
 		// Use names and ensure unique to protect against duplicates
 		Set<String> names = new LinkedHashSet<>(SpringFactoriesLoader.loadFactoryNames(type, classLoader));
+		// 反射调用构造函数创建实例
 		List<T> instances = createSpringFactoriesInstances(type, parameterTypes, classLoader, args, names);
 		AnnotationAwareOrderComparator.sort(instances);
 		return instances;
 	}
 
+	/**
+	 * 创建 spring 工厂
+	 */
 	@SuppressWarnings("unchecked")
 	private <T> List<T> createSpringFactoriesInstances(Class<T> type, Class<?>[] parameterTypes,
 			ClassLoader classLoader, Object[] args, Set<String> names) {

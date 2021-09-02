@@ -54,6 +54,7 @@ public abstract class Launcher {
 		}
 		ClassLoader classLoader = createClassLoader(getClassPathArchivesIterator());
 		String jarMode = System.getProperty("jarmode");
+		// 获取启动类：Start-Class
 		String launchClass = (jarMode != null && !jarMode.isEmpty()) ? JAR_MODE_LAUNCHER : getMainClass();
 		launch(args, launchClass, classLoader);
 	}
@@ -105,6 +106,7 @@ public abstract class Launcher {
 	 */
 	protected void launch(String[] args, String launchClass, ClassLoader classLoader) throws Exception {
 		Thread.currentThread().setContextClassLoader(classLoader);
+		// 调用application的main方法
 		createMainMethodRunner(launchClass, args, classLoader).run();
 	}
 

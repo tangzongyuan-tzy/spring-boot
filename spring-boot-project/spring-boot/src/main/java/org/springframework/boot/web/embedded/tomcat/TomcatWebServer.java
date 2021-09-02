@@ -111,6 +111,7 @@ public class TomcatWebServer implements WebServer {
 				addInstanceIdToEngineName();
 
 				Context context = findContext();
+				// StandardEngine[Tomcat].StandardHost[localhost].TomcatEmbeddedContext[]
 				context.addLifecycleListener((event) -> {
 					if (context.equals(event.getSource()) && Lifecycle.START_EVENT.equals(event.getType())) {
 						// Remove service connectors so that protocol binding doesn't
@@ -120,6 +121,7 @@ public class TomcatWebServer implements WebServer {
 				});
 
 				// Start the server to trigger initialization listeners
+				// 启动tomcat
 				this.tomcat.start();
 
 				// We can re-throw failure exception directly in the main thread
