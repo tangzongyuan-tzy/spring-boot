@@ -255,10 +255,11 @@ public class SpringApplication {
 		Assert.notNull(primarySources, "PrimarySources must not be null");
 		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
+		// 底层调用spring-framework-core，读取META-INF/spring.factories，将值放进cache中供后续使用
 		this.bootstrapRegistryInitializers = new ArrayList<>(getSpringFactoriesInstances(BootstrapRegistryInitializer.class));
-		// 设置初始化器集合
+		// 设置初始化器集合(内部根据反射来创建实例)
 		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
-		// 设置监听器集合
+		// 设置监听器集合(内部根据反射来创建实例)
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
 		// 设置应用启动类
 		this.mainApplicationClass = deduceMainApplicationClass();
@@ -266,6 +267,7 @@ public class SpringApplication {
 
 	private Class<?> deduceMainApplicationClass() {
 		try {
+			// 获取调用栈
 			StackTraceElement[] stackTrace = new RuntimeException().getStackTrace();
 			for (StackTraceElement stackTraceElement : stackTrace) {
 				if ("main".equals(stackTraceElement.getMethodName())) {
@@ -288,21 +290,21 @@ public class SpringApplication {
 	public ConfigurableApplicationContext run(String... args) {
 		StopWatch stopWatch = new StopWatch();
 		stopWatch.start();
-		// 创建一个应用上下文，这里实际上返回的内部没有实质内容，只是一个壳
+		// 创建一个应用上下文，这里返回的对象内部没有实质内容，只是一个壳
 		DefaultBootstrapContext bootstrapContext = createBootstrapContext();
 		// bean容器的引用
 		ConfigurableApplicationContext context = null;
 		// 设置系统属性java.awt.headless为true，即无显示器鼠标键盘等硬件设备的服务器模式
 		configureHeadlessProperty();
-		// 监听器，通过SpringFactoriesLoader加载listeners：比如EventPublishingRunListener
+		// 监听器，通过SpringFactoriesLoader加载listeners：EventPublishingRunListener
 		SpringApplicationRunListeners listeners = getRunListeners(args);
 		// 发布SprintBoot启动事件：ApplicationStartingEvent
 		// 对应的监听器会监听到，进行处理
 		listeners.starting(bootstrapContext, this.mainApplicationClass);
 		try {
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
-			// 环境相关
-			// 创建和配置environment，发布事件：SpringApplicationRunListeners#environmentPrepared
+			// 环境相关：创建和配置environment，配置文件在此处读取(application.properties application.yml)
+			// 发布事件：SpringApplicationRunListeners#environmentPrepared
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
 			configureIgnoreBeanInfo(environment);
 			Banner printedBanner = printBanner(environment);
@@ -313,6 +315,7 @@ public class SpringApplication {
 			context.setApplicationStartup(this.applicationStartup);
 			// 准备环境
 			// 调用EventPublishingRunListener发布ApplicationContext加载完毕事件：ApplicationPreparedEvent
+
 			prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
 			// 容器处理，最终会调用到AbstractApplicationContext#refresh方法，实际上就是Spring IOC容器的创建过程，并且会进行
 			//  自动装配的操作,以及发布ApplicationContext已经refresh事件，标志着ApplicationContext初始化完成

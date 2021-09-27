@@ -86,7 +86,7 @@ public class JarLauncher extends ExecutableArchiveLauncher {
 		return NESTED_ARCHIVE_ENTRY_FILTER.matches(entry);
 	}
 
-	/**
+	/** spring-boot jar包的入口方法
 	 * 依据jar包规范，一个可执行jar包，必须要在MAINFEST.MF中配置Main-Class，该类的main方法就是jar包的入口
 	 * 而springboot项目打成jar包之后，Main-Class的值为org.springframework.boot.loader.JarLauncher
 	 * 也就是说，执行java -jar命令，会调用此main方法。
